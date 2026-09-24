@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D12-3 Flight Simulation - OpenRocket 3D Flight Visualizer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Interactive UI Overlay -->
+    <div class="ui-overlay">
+        <!-- Floating Success Notification -->
+        <div id="import-notification" class="import-notification">
+            <span class="notification-icon">✓</span>
+            <span id="notification-text">Flight Data Loaded</span>
+        </div>
+
+        <!-- Top Navigation / Header Bar -->
+        <header class="top-bar">
+            <!-- Left Header Area: Rocket Icon, Title, Badge, Subtitle & Location -->
+            <div class="header-left interactive">
+                <div class="header-brand-block">
+                    <!-- Tilted Rocket Icon matching reference -->
+                    <div class="rocket-brand-icon">
+                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path>
+                            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path>
+                            <path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2.5 5-2.5"></path>
+                            <path d="M12 15v5s3.03-.55 4.5-2c1.63-1.62 2.5-5 2.5-5"></path>
+                        </svg>
+                    </div>
+
+                    <!-- Title & Metadata -->
+                    <div class="header-titles">
+                        <div class="title-row">
+                            <h1 id="sim-title" class="sim-title">D12-3 Flight Simulation</h1>
+                            <span class="badge-predicted">PREDICTED</span>
+                        </div>
+                        <div id="sim-subtitle" class="sim-subtitle">
+                            <span class="meta-source">OpenRocket CSV</span>
+                            <span class="meta-dot">&bull;</span>
+                            <span id="sim-duration-text" class="meta-duration">26.89 s simulated flight</span>
+                        </div>
+                    </div>
+
+                    <!-- Launch Site Location Context -->
+                    <div class="header-location-block">
+                        <div class="location-site-row">
+                            <svg class="location-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span id="site-label">Freestone Park — Gilbert, AZ</span>
+                        </div>
+                        <div class="location-view-row">
+                            <svg class="view-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                            <span id="view-mode-label">Satellite View</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Right Controls: 3 Distinct Translucent Cards -->
+            <div class="top-right-tools interactive">
+                <!-- Group 1: Flight Data -->
+                <div class="tool-card">
+                    <span class="tool-card-title">FLIGHT DATA</span>
+                    <div class="tool-card-actions">
+                        <div class="select-wrapper">
+                            <svg class="card-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#94a3b8" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <select id="preset-select" class="btn-select" title="Select flight simulation">
+                                <option value="default">sim1.csv</option>
+                                <option value="sim1">sim1 (F32T 87s)</option>
+                                <option value="f32t">f32t no angle.csv</option>
+                            </select>
+                        </div>
+                        <input type="file" id="csv-file-input" accept=".csv,.txt,.tsv,.dat,text/csv,text/plain" style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;">
+                        <label for="csv-file-input" id="btn-import-csv" class="btn-action" title="Import OpenRocket CSV export">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Import CSV
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Group 2: Environment -->
+                <div class="tool-card">
+                    <span class="tool-card-title">ENVIRONMENT</span>
+                    <div class="tool-card-actions">
+                        <button id="btn-toggle-map" class="btn-action active" title="Toggle Freestone Park aerial satellite terrain">Map: Satellite <span class="arrow-down">▾</span></button>
+                        <button id="btn-toggle-grid" class="btn-action active" title="Toggle metric distance rings & coordinate grid">Grid: On <span class="arrow-down">▾</span></button>
+                        <button id="btn-toggle-field" class="btn-action" title="Center launch pad on Soccer Field parallel to parking lot">Field: Parallel <span class="arrow-down">▾</span></button>
+                    </div>
+                </div>
+
+                <!-- Group 3: Camera Modes -->
+                <div class="tool-card">
+                    <span class="tool-card-title">CAMERA</span>
+                    <div class="cam-button-group">
+                        <button class="btn-cam active" data-cam="chase" title="Follow rocket chase view">Chase</button>
+                        <button class="btn-cam" data-cam="pad" title="Launch pad tracker looking up">Pad</button>
+                        <button class="btn-cam" data-cam="apogee" title="Wide high-altitude overview">Apogee</button>
+                        <button class="btn-cam" data-cam="free" title="Free orbit and pan (mouse/touch)">Free Orbit</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Middle Area: Left Simulation HUD & Right Event Timeline -->
+        <div class="middle-viewport">
+            <!-- Left Simulation Data Panel -->
+            <aside id="simulation-panel" class="simulation-hud interactive">
+                <div class="panel-header">
+                    <div class="panel-heading-row">
+                        <span class="panel-title-text">SIMULATION DATA</span>
+                        <button id="btn-toggle-panel" class="btn-collapse" title="Collapse Panel">‹</button>
+                    </div>
+                    <div class="panel-subtitle-text">Predicted &bull; OpenRocket</div>
+                </div>
+
+                <!-- Section 1: POSITION -->
+                <div class="hud-category">
+                    <div class="category-header">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        POSITION
+                    </div>
+                    <div class="hud-grid">
+                        <div class="hud-item">
+                            <span class="hud-label">Altitude</span>
+                            <span class="hud-value"><span id="tel-alt">0.0</span><span class="hud-unit">m</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Max Apogee</span>
+                            <span class="hud-value"><span id="tel-max-alt">0.0</span><span class="hud-unit">m</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: MOTION -->
+                <div class="hud-category">
+                    <div class="category-header">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        MOTION
+                    </div>
+                    <div class="hud-grid">
+                        <div class="hud-item">
+                            <span class="hud-label">Vertical Velocity</span>
+                            <span class="hud-value"><span id="tel-vert-vel">+0.0</span><span class="hud-unit">m/s</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Total Velocity</span>
+                            <span class="hud-value"><span id="tel-total-vel">0.0</span><span class="hud-unit">m/s</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Vertical Acceleration</span>
+                            <span class="hud-value"><span id="tel-vert-acc">0.0</span><span class="hud-unit">m/s²</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">G-Force</span>
+                            <span class="hud-value"><span id="tel-gforce">1.0</span><span class="hud-unit">g</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: AERODYNAMICS -->
+                <div class="hud-category">
+                    <div class="category-header">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path>
+                            <path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path>
+                            <path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path>
+                        </svg>
+                        AERODYNAMICS
+                    </div>
+                    <div class="hud-grid">
+                        <div class="hud-item">
+                            <span class="hud-label">Motor Thrust</span>
+                            <span class="hud-value"><span id="tel-thrust">0.0</span><span class="hud-unit">N</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Aerodynamic Drag</span>
+                            <span class="hud-value"><span id="tel-drag">0.00</span><span class="hud-unit">N</span></span>
+                        </div>
+                        <div class="hud-item full-width">
+                            <span class="hud-label">Mach Number</span>
+                            <span class="hud-value"><span id="tel-mach">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: FLIGHT -->
+                <div class="hud-category">
+                    <div class="category-header">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        FLIGHT
+                    </div>
+                    <div class="hud-grid">
+                        <div class="hud-item">
+                            <span class="hud-label">Flight Time</span>
+                            <span class="hud-value"><span id="tel-time">0.00</span><span class="hud-unit">s</span></span>
+                        </div>
+                        <div class="hud-item">
+                            <span class="hud-label">Downrange Drift</span>
+                            <span class="hud-value"><span id="tel-drift">0.0</span><span class="hud-unit">m</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: DATA SOURCE -->
+                <div class="hud-category data-source-category">
+                    <div class="category-header">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                            <line x1="8" y1="21" x2="16" y2="21"></line>
+                            <line x1="12" y1="17" x2="12" y2="21"></line>
+                        </svg>
+                        DATA SOURCE
+                    </div>
+                    <div class="data-source-row">
+                        <span class="data-source-badge">OpenRocket Simulation</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Bottom-Right Viewport Instruments (Scale bar & Compass Rose) -->
+            <div class="viewport-instruments interactive">
+                <div class="scale-bar-container">
+                    <div class="scale-labels">
+                        <span>0</span>
+                        <span>50</span>
+                        <span>100</span>
+                        <span>200 m</span>
+                    </div>
+                    <div class="scale-ruler">
+                        <div class="scale-segment"></div>
+                        <div class="scale-segment"></div>
+                        <div class="scale-segment"></div>
+                    </div>
+                </div>
+
+                <div class="compass-rose" id="compass-rose" title="Compass Heading (True North)">
+                    <div class="compass-dial" id="compass-dial">
+                        <span class="compass-n">N</span>
+                        <div class="compass-pointer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Flight Events Panel -->
+            <aside id="event-panel" class="event-panel interactive">
+                <div class="event-panel-header">
+                    <span class="event-panel-title">FLIGHT EVENTS</span>
+                    <span class="event-panel-badge">SIMULATED</span>
+                </div>
+                <div class="event-timeline-wrapper">
+                    <div class="vertical-timeline-line"></div>
+                    <div id="event-jump-list" class="event-list-container">
+                        <!-- Dynamically rendered vertical timeline items -->
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Sleek Floating Bottom Flight Timeline Bar -->
+        <footer class="bottom-controls interactive">
+            <!-- Left Playback Buttons & Readout -->
+            <div class="timeline-left-block">
+                <button id="btn-play" class="btn-play-circle" title="Play / Pause (Spacebar)">
+                    <svg id="play-icon" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+                    <svg id="pause-icon" viewBox="0 0 24 24" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                </button>
+                <button id="btn-step-prev" class="btn-step" title="Previous Event (Left Arrow)">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><rect x="4" y="5" width="2.5" height="14"></rect><polygon points="20 5 9 12 20 19 20 5"></polygon></svg>
+                </button>
+                <button id="btn-step-next" class="btn-step" title="Next Event (Right Arrow)">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><polygon points="4 5 15 12 4 19 4 5"></polygon><rect x="17.5" y="5" width="2.5" height="14"></rect></svg>
+                </button>
+
+                <div class="timeline-time-display">
+                    <span id="playback-time-display" class="time-readout">0.00 s / 26.89 s</span>
+                </div>
+
+                <div class="timeline-phase-pill">
+                    <span class="phase-label">PHASE</span>
+                    <span class="phase-value">
+                        <span id="phase-dot" class="phase-dot">●</span>
+                        <span id="timeline-phase-text">Pad Ready</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Scrubber with Milestone Markers Above Track -->
+            <div class="timeline-center-block">
+                <!-- Milestone Event Labels and Markers -->
+                <div id="timeline-milestones" class="timeline-milestones">
+                    <!-- Dynamically rendered: Ignition 0.0s, Liftoff 1.1s, etc. -->
+                </div>
+
+                <!-- Continuous Progress Track -->
+                <div class="scrubber-track-container">
+                    <div class="timeline-track">
+                        <div id="timeline-progress" class="timeline-progress"></div>
+                    </div>
+                    <div id="timeline-marker-dots" class="timeline-marker-dots"></div>
+                    <div id="timeline-handle" class="timeline-handle"></div>
+                    <input type="range" id="timeline-scrubber" class="timeline-scrubber" min="0" max="30" step="0.01" value="0">
+                </div>
+            </div>
+
+            <!-- Right Speed, Sound & Loop Controls -->
+            <div class="timeline-right-block">
+                <!-- Tasteful Synchronized Audio Controls -->
+                <div class="sound-control-wrapper" title="Synchronized Flight Sound">
+                    <button id="btn-sound" class="btn-sound" title="Toggle Sound (Mute/Unmute)">
+                        <svg id="sound-icon-on" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                        </svg>
+                        <svg id="sound-icon-off" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <line x1="23" y1="9" x2="17" y2="15"></line>
+                            <line x1="17" y1="9" x2="23" y2="15"></line>
+                        </svg>
+                        <span class="sound-btn-text">Sound</span>
+                    </button>
+                    <input type="range" id="sound-volume-slider" class="sound-volume-slider" min="0" max="1" step="0.05" value="0.70" title="Audio Volume">
+                </div>
+
+                <div class="speed-select-wrapper">
+                    <select id="speed-select" class="speed-select" title="Playback speed multiplier">
+                        <option value="0.25">0.25x</option>
+                        <option value="0.5">0.5x</option>
+                        <option value="1.0" selected>1.0x</option>
+                        <option value="2.0">2.0x</option>
+                        <option value="5.0">5.0x</option>
+                    </select>
+                </div>
+
+                <button id="btn-loop" class="btn-loop" title="Toggle Loop">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="17 1 21 5 17 9"></polyline>
+                        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                        <polyline points="7 23 3 19 7 15"></polyline>
+                        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                    </svg>
+                    Loop
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Drag and Drop Overlay -->
+    <div id="drop-overlay" class="drop-overlay">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <div class="drop-message">Drop OpenRocket CSV here</div>
+        <div class="drop-subtext">Visualizes the entire flight trajectory instantly in 3D</div>
+    </div>
+
+    <!-- Offline Three.js with CDN fallback -->
+    <script src="js/lib/three.min.js"></script>
+    <script>
+        if (typeof THREE === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+        }
+    </script>
+    <script src="js/lib/OrbitControls.js"></script>
+    <script>
+        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"><\/script>');
+        }
+    </script>
+
+    <!-- Freestone Park Satellite Map Data (Zero-CORS, Standalone) -->
+    <script src="data/freestone_satellite.js"></script>
+
+    <!-- Main Application (Zero-CORS, Standalone & Offline Ready) -->
+    <script src="js/app.js"></script>
+</body>
+</html>

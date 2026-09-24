@@ -10,11 +10,17 @@ def build():
     with open('sim1.csv', 'r', encoding='utf-8') as f:
         sim1_text = f.read()
 
-    with open('f32t no angle.csv', 'r', encoding='utf-8', errors='replace') as f:
-        f32t_text = f.read()
+    try:
+        with open('f32t no angle.csv', 'r', encoding='utf-8', errors='replace') as f:
+            f32t_text = f.read()
+    except OSError:
+        f32t_text = sim1_text
 
-    with open('data/default_flight.csv', 'r', encoding='utf-8') as f:
-        default_text = f.read()
+    try:
+        with open('data/default_flight.csv', 'r', encoding='utf-8') as f:
+            default_text = f.read()
+    except OSError:
+        default_text = sim1_text
 
     with open('js/parser.js', 'r', encoding='utf-8') as f:
         parser_js = f.read().replace('export class OpenRocketParser', 'class OpenRocketParser')

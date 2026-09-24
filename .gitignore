@@ -27,8 +27,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+!js/lib/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -58,4 +59,11 @@ scratch_*.py
 # Local Server & Browser Test Artifacts
 .playwright/
 screenshots/
+
+# Simulation CSV Exports (keep sim1.csv as canonical demo)
+*.csv
+!sim1.csv
+
+# Local Portfolio Notes
+portfolio_update.md
 

@@ -4,6 +4,8 @@ An interactive 3D WebGL flight replay and trajectory visualizer for **OpenRocket
 
 The application places simulated model and high-power rocket flights into an interactive 3D geographic environment with calibrated aerial satellite imagery, real-time simulation data readouts, camera tracking, and simulation-synchronized flight audio.
 
+![OpenRocket 3D Flight Visualizer](assets/preview.png)
+
 ---
 
 ### Built With
